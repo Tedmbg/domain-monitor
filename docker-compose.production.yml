@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  # Web server with PHP and Apache
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: domain-monitor-web
+    ports:
+      - "80:80"
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=domain_monitor
+      - DB_USERNAME=domain_user
+      - DB_PASSWORD=secure_password_change_me
+      - APP_URL=http://localhost
+      - APP_TIMEZONE=UTC
+    depends_on:
+      - mysql
+    volumes:
+      - ./:/var/www/html
+      - ./logs:/var/www/html/logs
+    networks:
+      - domain-monitor-network
+    restart: unless-stopped
+
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: domain-monitor-mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=%8nfWkebA*$#xfmDB2Pz
+      - MYSQL_DATABASE=domain_monitor
+      - MYSQL_USER=techcipe
+      - MYSQL_PASSWORD=%8nfWkebA*$#xfmDB2Pz
+    volumes:
+      - mysql_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    networks:
+      - domain-monitor-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  # Cron job runner
+  cron:
+    build:
+      context: .
+      dockerfile: Dockerfile.cron
+    container_name: domain-monitor-cron
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=domain_monitor
+      - DB_USERNAME=techcipe
+      - DB_PASSWORD=%8nfWkebA*$#xfmDB2Pz
+    depends_on:
+      - mysql
+    volumes:
+      - ./cron:/var/www/html/cron
+      - ./logs:/var/www/html/logs
+    networks:
+      - domain-monitor-network
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
+
+networks:
+  domain-monitor-network:
+    driver: bridge

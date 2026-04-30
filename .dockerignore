@@ -1,0 +1,13 @@
+.git
+.gitignore
+.github
+README.md
+LICENSE
+.DS_Store
+*.log
+vendor/
+node_modules/
+.env.example
+.env
+storage/logs/
+storage/cache/

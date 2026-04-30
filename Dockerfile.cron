@@ -1,0 +1,42 @@
+# Cron container for Domain Monitor
+FROM php:8.1-cli
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    libpq-dev \
+    libzip-dev \
+    zip \
+    unzip \
+    cron \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install PHP extensions
+RUN docker-php-ext-install \
+    pdo \
+    pdo_mysql \
+    zip \
+    && docker-php-ext-enable pdo pdo_mysql zip
+
+# Install Composer
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+
+# Set working directory
+WORKDIR /var/www/html
+
+# Copy application files
+COPY . .
+
+# Install PHP dependencies
+RUN composer install --no-dev --optimize-autoloader
+
+# Create cron log file
+RUN mkdir -p logs && touch logs/cron.log
+
+# Create crontab entry
+RUN echo "0 * * * * /usr/local/bin/php /var/www/html/cron/check_domains.php >> /var/www/html/logs/cron.log 2>&1" > /tmp/crontab.txt \
+    && crontab /tmp/crontab.txt
+
+# Run cron in foreground
+CMD ["cron", "-f"]
